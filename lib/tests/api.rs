@@ -139,6 +139,9 @@ mod api_integration {
 			assert_eq!(poll!(pin!(db.wait_for(Connection))), Poll::Ready(()));
 			assert_eq!(poll!(pin!(db.wait_for(Database))), Poll::Ready(()));
 
+			let result = db.query("INFO FOR SCOPE users").await;
+			assert!(result.is_ok());
+
 			drop(permit);
 		}
 
