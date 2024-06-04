@@ -2791,9 +2791,9 @@ impl TryNeg for Value {
 
 #[cfg(test)]
 mod tests {
-
+	use revision::Revisioned;
 	use super::*;
-	use crate::syn::Parse;
+	use crate::{sql::statements::InfoStatement, syn::Parse};
 
 	#[test]
 	fn check_none() {
@@ -2916,5 +2916,45 @@ mod tests {
 		let enc: Vec<u8> = val.into();
 		let dec: Value = enc.into();
 		assert_eq!(res, dec);
+	}
+
+	#[test]
+	fn ser_de_example_success() {
+		// Although the value here is false and the byte value is `true`,
+		// this will be equal to the deserialised bytes because the `InfoStatement::ns_migrate` function is being called`
+		// which sets the value to false.
+		let info_statement = crate::sql::statements::InfoStatement::Ns(false);
+
+		let test_data = vec![
+			1, // revision 1
+			2, // variant index 2 of InfoStatement, which is `Ns`
+			1 // value is `true`
+		];
+		let result = InfoStatement::deserialize_revisioned(&mut test_data.as_slice());
+		println!("Result: {:?}", result);
+		assert!(result.is_ok());
+		assert_eq!(result.unwrap(), info_statement);
+	}
+
+	#[test]
+	fn ser_de_example_fail() {
+		// Revision 1 of `InfoStatement looked like this:`
+		// pub enum InfoStatement {
+		// 	Root,
+		// 	Ns,
+		// 	Db,
+		// 	Sc(Ident),
+		// 	Tb(Ident),
+		// 	User(Ident, Option<Base>),
+		// }
+		// where the variant index of `Db` was 2.
+		let test_data = vec![
+			1, // revision 1
+			1, // variant index 1 of InfoStatement, which is `Ns` in revision 1 but is a variant only available in revision 2 in revision 2.
+			1 // value is `true`
+		];
+		let result = InfoStatement::deserialize_revisioned(&mut test_data.as_slice());
+		println!("Result: {:?}", result);
+		assert!(result.is_ok());
 	}
 }
